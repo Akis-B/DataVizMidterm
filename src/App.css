@@ -1,0 +1,38 @@
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #1E110B;
+}
+
+.app {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app__canvas {
+  width: min(70vw, 70vh);
+  height: min(70vw, 70vh);
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: clamp(4px, 0.8vmin, 12px);
+  padding: clamp(8px, 1.2vmin, 20px);
+  box-sizing: border-box;
+}
+
+.app__cell {
+  width: 85%;
+  aspect-ratio: 1 / 1;
+  background-color: #160B06;
+  border: none;
+  padding: 0;
+  justify-self: center;
+  align-self: center;
+  transition: background-color 120ms ease;
+}
