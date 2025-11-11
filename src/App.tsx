@@ -16,6 +16,7 @@ const TOOLTIP_PADDING_X_SCALE = 1.25
 const TOOLTIP_PADDING_Y_SCALE = 0.55
 const MODAL_LINE_HEIGHT = 1.6
 const NEAREST_NEIGHBOR_COUNT = 3
+const MOBILE_POINTER_QUERY = '(pointer: coarse)'
 
 let measurementContext: CanvasRenderingContext2D | null = null
 
@@ -101,6 +102,8 @@ function App() {
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(true)
   const [modalFontSizePx, setModalFontSizePx] = useState(() => getResponsiveFontSizePx())
+  const [mobileActiveCell, setMobileActiveCell] = useState<number | null>(null)
+  const isMobile = useIsMobile()
 
   useEffect(() => {
     if (typeof window === 'undefined') return
@@ -108,6 +111,12 @@ function App() {
     window.addEventListener('resize', handleResize)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
+
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileActiveCell(null)
+    }
+  }, [isMobile])
 
   const updateTooltip = (event: MouseEvent<HTMLButtonElement>, tree: TreeRecord) => {
     const tooltipLines = getTreeTooltipContent(tree)
@@ -131,6 +140,19 @@ function App() {
       return next
     })
     setTooltip(null)
+    setMobileActiveCell((active) => (active === cellIndex ? null : active))
+  }
+
+  const handleMobileTooltipRequest = (
+    cellIndex: number,
+    event: MouseEvent<HTMLButtonElement>,
+    tree: TreeRecord,
+  ) => {
+    if (mobileActiveCell != null && mobileActiveCell !== cellIndex) {
+      handleCellMouseLeave(mobileActiveCell)
+    }
+    setMobileActiveCell(cellIndex)
+    updateTooltip(event, tree)
   }
 
   const closeModal = () => setIsModalOpen(false)
@@ -267,10 +289,15 @@ function App() {
                   key={index}
                   index={index}
                   tree={tree}
+                  isMobile={isMobile}
+                  mobileActiveCell={mobileActiveCell}
                   onMouseLeave={() => handleCellMouseLeave(index)}
                   onHoverStart={updateTooltip}
                   onHoverMove={updateTooltip}
                   onHoverEnd={() => setTooltip(null)}
+                  onMobileTooltipRequest={(event, tappedTree) =>
+                    handleMobileTooltipRequest(index, event, tappedTree)
+                  }
                 />
               )
             })}
@@ -286,47 +313,82 @@ export default App
 type CellProps = {
   index: number
   tree?: TreeRecord
+  isMobile: boolean
+  mobileActiveCell: number | null
   onMouseLeave: () => void
   onHoverStart: (event: MouseEvent<HTMLButtonElement>, tree: TreeRecord) => void
   onHoverMove: (event: MouseEvent<HTMLButtonElement>, tree: TreeRecord) => void
   onHoverEnd: () => void
+  onMobileTooltipRequest: (event: MouseEvent<HTMLButtonElement>, tree: TreeRecord) => void
 }
 
-function Cell({ index, tree, onMouseLeave, onHoverStart, onHoverMove, onHoverEnd }: CellProps) {
+function Cell({
+  index,
+  tree,
+  isMobile,
+  mobileActiveCell,
+  onMouseLeave,
+  onHoverStart,
+  onHoverMove,
+  onHoverEnd,
+  onMobileTooltipRequest,
+}: CellProps) {
   const handleMouseEnter = (event: MouseEvent<HTMLButtonElement>) => {
-    if (!tree) return
+    if (!tree || isMobile) return
     event.currentTarget.style.backgroundColor = getAccessibilityColor(tree.accessibilityScore)
     onHoverStart(event, tree)
   }
 
   const handleMouseMove = (event: MouseEvent<HTMLButtonElement>) => {
-    if (!tree) return
+    if (!tree || isMobile) return
     onHoverMove(event, tree)
   }
 
   const handleMouseLeave = (event: MouseEvent<HTMLButtonElement>) => {
+    if (isMobile) return
     event.currentTarget.style.backgroundColor = DEFAULT_CELL_COLOR
     onHoverEnd()
     onMouseLeave()
   }
 
-  const handleClick = () => {
+  const handleClick = (event: MouseEvent<HTMLButtonElement>) => {
     if (!tree) return
-    const url = `https://www.google.com/maps/search/?api=1&query=${tree.latitude},${tree.longitude}`
-    window.open(url, '_blank', 'noopener')
+    if (isMobile) {
+      if (mobileActiveCell === index) {
+        onHoverEnd()
+        onMouseLeave()
+        openTreeLocation(tree)
+        return
+      }
+      onMobileTooltipRequest(event, tree)
+      return
+    }
+
+    openTreeLocation(tree)
   }
+
+  const mobileActiveStyle =
+    isMobile && tree && mobileActiveCell === index
+      ? { backgroundColor: getAccessibilityColor(tree.accessibilityScore) }
+      : undefined
 
   return (
     <button
       type="button"
       className="app__cell"
       aria-label={`Cell ${Math.floor(index / GRID_SIZE) + 1}, ${index % GRID_SIZE + 1}`}
+      style={mobileActiveStyle}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     />
   )
+}
+
+function openTreeLocation(tree: TreeRecord): void {
+  const url = `https://www.google.com/maps/search/?api=1&query=${tree.latitude},${tree.longitude}`
+  window.open(url, '_blank', 'noopener')
 }
 
 function parseTreeData(
@@ -760,6 +822,31 @@ function getMeasurementContext(): CanvasRenderingContext2D | null {
 
   measurementContext = context
   return context
+}
+
+function useIsMobile(): boolean {
+  const [isMobile, setIsMobile] = useState(() => isCoarsePointerDevice())
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return
+    const mediaQuery = window.matchMedia(MOBILE_POINTER_QUERY)
+    const handleChange = (event: MediaQueryListEvent) => setIsMobile(event.matches)
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handleChange)
+      return () => mediaQuery.removeEventListener('change', handleChange)
+    }
+
+    mediaQuery.addListener(handleChange)
+    return () => mediaQuery.removeListener(handleChange)
+  }, [])
+
+  return isMobile
+}
+
+function isCoarsePointerDevice(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+  return window.matchMedia(MOBILE_POINTER_QUERY).matches
 }
 
 function assignTreeFriendsScores(trees: TreeRecord[], neighborCount = 5): void {
