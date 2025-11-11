@@ -1,4 +1,4 @@
-import { useState, type MouseEvent } from 'react'
+import { useEffect, useState, type MouseEvent } from 'react'
 import treeDataCsv from '../Data/CleanedTreeData.csv?raw'
 import neighborhoodsCsv from '../Data/NeighborhoodCoordinates.csv?raw'
 import rentDataCsv from '../Data/StreetEasyRentDataCL.csv?raw'
@@ -14,6 +14,7 @@ const TOOLTIP_FONT_SIZE_MAX_PX = 18
 const TOOLTIP_FONT_SIZE_VIEWPORT_RATIO = 0.015
 const TOOLTIP_PADDING_X_SCALE = 1.25
 const TOOLTIP_PADDING_Y_SCALE = 0.55
+const MODAL_LINE_HEIGHT = 1.6
 const NEAREST_NEIGHBOR_COUNT = 3
 
 let measurementContext: CanvasRenderingContext2D | null = null
@@ -98,6 +99,15 @@ function App() {
     Array.from({ length: CELL_COUNT }, () => getRandomTreeIndex()),
   )
   const [tooltip, setTooltip] = useState<TooltipState | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(true)
+  const [modalFontSizePx, setModalFontSizePx] = useState(() => getResponsiveFontSizePx())
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleResize = () => setModalFontSizePx(getResponsiveFontSizePx())
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   const updateTooltip = (event: MouseEvent<HTMLButtonElement>, tree: TreeRecord) => {
     const tooltipLines = getTreeTooltipContent(tree)
@@ -123,8 +133,107 @@ function App() {
     setTooltip(null)
   }
 
+  const closeModal = () => setIsModalOpen(false)
+
   return (
     <main className="app">
+      <header className="app__header">
+        <button
+          type="button"
+          className="app__help-button"
+          aria-label="Show project onboarding"
+          onClick={() => setIsModalOpen(true)}
+        >
+          ?
+        </button>
+      </header>
+      {isModalOpen && (
+        <div className="app__modal-overlay" role="presentation" onClick={closeModal}>
+          <div
+            className="app__modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="onboarding-modal-title"
+            aria-describedby="onboarding-modal-body"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button type="button" className="app__modal-close" aria-label="Close onboarding" onClick={closeModal}>
+              ×
+            </button>
+            <h1
+              id="onboarding-modal-title"
+              className="app__modal-title"
+              style={{ fontSize: `${modalFontSizePx * 2}px`, lineHeight: MODAL_LINE_HEIGHT }}
+            >
+              Random Roots
+            </h1>
+            <div
+              id="onboarding-modal-body"
+              className="app__modal-body"
+              style={{ fontSize: `${modalFontSizePx}px`, lineHeight: MODAL_LINE_HEIGHT }}
+            >
+              <p>
+                Random Roots is a conceptual project that explores how urban trees in New York City can be represented,
+                ranked, and interpreted through the lens of accessibility.
+              </p>
+              <p>
+                The interface displays a mosaic of neutral buttons, each corresponding to a tree in Manhattan as recorded
+                in the 2015 NYC Tree Census. At first, every button appears uncolored. The color is only revealed when
+                the user hovers over a button, temporarily uncovering the tree&apos;s accessibility score:
+              </p>
+              <p>
+                Dark green signifies a tree that is classified as more accessible.
+                <br />
+                Red indicates a tree that is less accessible.
+              </p>
+              <p>
+                Once the user moves the cursor away, that tree disappears from view and is replaced by another randomly
+                selected one. This cycle prevents returning to the same tree and introduces a deliberate element of
+                ephemerality and impermanence. The mechanic mirrors both the transient nature of digital interaction and
+                the ongoing change within ecological systems.
+              </p>
+              <p>
+                By clicking on a button during the brief moment it is visible, users can access the tree&apos;s
+                coordinates on Google Maps, where they may explore its location and surroundings through Street View.
+                (Note: since the underlying data originates from 2015, certain entries may not fully reflect current
+                conditions.)
+              </p>
+              <p>
+                The project draws on two public datasets:
+              </p>
+              <ul className="app__modal-list">
+                <li>- The 2015 NYC Tree Census from NYC Open Data</li>
+                <li>- The StreetEasy median rent dataset from November 2025</li>
+              </ul>
+              <p>
+                Two calculated indices inform the visualization:
+              </p>
+              <ul className="app__modal-list">
+                <li>
+                  - The Tree Friends Index (0&ndash;4) measures how densely a tree is surrounded by others. A score of 4
+                  corresponds to an average spacing of approximately three meters between the five nearest trees.
+                </li>
+                <li>
+                  - The Affordability Score represents the relative housing cost associated with each tree&apos;s
+                  location, where higher values indicate areas with lower median rent.
+                </li>
+              </ul>
+              <p>
+                Inspired by the DxD 2025 theme &quot;Ecosystems and Cycles of Life,&quot; Random Roots investigates the
+                cyclical dynamics between environment, data, and perception. The constant regeneration of tree
+                representations reflects the recursive patterns of growth, decay, and renewal found in both urban and
+                natural systems.
+              </p>
+              <p>
+                While the project employs quantitative methods, it also engages critically with them. The act of ranking
+                trees is intentionally self-contradictory: a commentary on the ways urban data practices can transform
+                living environments into metrics. Random Roots invites reflection on how systems of categorization
+                mediate our understanding of both nature and the city.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       {tooltip && (
         <div
           className="app__tooltip"
@@ -148,21 +257,25 @@ function App() {
           ))}
         </div>
       )}
-      <div className="app__canvas">
-        {Array.from({ length: CELL_COUNT }).map((_, index) => {
-          const tree = trees[cellTreeIndices[index]]
-          return (
-            <Cell
-              key={index}
-              index={index}
-              tree={tree}
-              onMouseLeave={() => handleCellMouseLeave(index)}
-              onHoverStart={updateTooltip}
-              onHoverMove={updateTooltip}
-              onHoverEnd={() => setTooltip(null)}
-            />
-          )
-        })}
+      <div className="app__content">
+        <div className="app__stage">
+          <div className="app__canvas">
+            {Array.from({ length: CELL_COUNT }).map((_, index) => {
+              const tree = trees[cellTreeIndices[index]]
+              return (
+                <Cell
+                  key={index}
+                  index={index}
+                  tree={tree}
+                  onMouseLeave={() => handleCellMouseLeave(index)}
+                  onHoverStart={updateTooltip}
+                  onHoverMove={updateTooltip}
+                  onHoverEnd={() => setTooltip(null)}
+                />
+              )
+            })}
+          </div>
+        </div>
       </div>
     </main>
   )

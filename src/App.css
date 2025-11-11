@@ -11,14 +11,41 @@ body {
 
 .app {
   min-height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  padding: clamp(16px, 3vmin, 40px);
+  box-sizing: border-box;
+  gap: clamp(12px, 2vmin, 24px);
+}
+
+.app__header {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.app__content {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app__stage {
+  width: min(70vw, 70vh);
+  height: min(70vw, 70vh);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .app__canvas {
-  width: min(70vw, 70vh);
-  height: min(70vw, 70vh);
+  width: 100%;
+  height: 100%;
   display: grid;
   grid-template-columns: repeat(12, 1fr);
   gap: clamp(4px, 0.8vmin, 12px);
@@ -66,4 +93,109 @@ body {
   color: #FF4D4F;
   display: inline;
   margin-left: 0.25ch;
+}
+
+.app__help-button {
+  border: none;
+  background-color: transparent;
+  color: #312013;
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-size: clamp(1.2rem, 3vmin, 1.8rem);
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.app__help-button:hover {
+  color: #FFFFFF;
+}
+
+.app__help-button:focus-visible {
+  outline: 2px solid #312013;
+}
+
+.app__modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: #1E110B;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(16px, 4vmin, 64px);
+  z-index: 10;
+}
+
+.app__modal {
+  position: relative;
+  width: min(90vw, 1024px);
+  min-width: min(70vw, 70vh);
+  min-height: min(70vw, 70vh);
+  max-height: 90vh;
+  overflow-y: auto;
+  background-color: #160B06;
+  border: 2px solid #312013;
+  color: #FFFFFF;
+  font-family: 'Menlo', 'Courier New', monospace;
+  padding: clamp(24px, 4vmin, 56px);
+  box-sizing: border-box;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.app__modal-title {
+  margin: 0 0 1.5rem;
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-weight: 400;
+  text-transform: none;
+}
+
+.app__modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.app__modal-body p {
+  margin: 0;
+  color: #FFFFFF;
+}
+
+.app__modal-list {
+  margin: 0 0 0.5rem 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.app__modal-list li {
+  margin: 0.25rem 0;
+  text-indent: -0.5rem;
+  padding-left: 0.5rem;
+  font-family: 'Menlo', 'Courier New', monospace;
+}
+
+.app__modal-close {
+  position: absolute;
+  top: clamp(16px, 2vmin, 28px);
+  right: clamp(16px, 2vmin, 28px);
+  border: none;
+  background-color: transparent;
+  color: #312013;
+  font-size: 1.9rem;
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-weight: 300;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  transition: color 120ms ease;
+}
+
+.app__modal-close:hover {
+  color: #FFFFFF;
+}
+
+.app__modal-close:focus-visible {
+  outline: 2px solid #312013;
 }
