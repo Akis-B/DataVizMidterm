@@ -35,4 +35,35 @@ body {
   justify-self: center;
   align-self: center;
   transition: background-color 120ms ease;
+  cursor: pointer;
+}
+
+.app__tooltip {
+  position: fixed;
+  background-color: #160B06;
+  border: 0.5px solid #8B7D73;
+  color: #FFFFFF;
+  font-family: 'Menlo', 'Courier New', monospace;
+  font-size: clamp(0.45rem, 1vw, 0.85rem);
+  line-height: 2.1;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+  pointer-events: none;
+  user-select: none;
+  padding: 0;
+  box-sizing: border-box;
+  white-space: pre-line;
+}
+
+.app__tooltip-line {
+  display: block;
+}
+
+.app__tooltip-line--dead {
+  color: #FF4D4F;
+  display: inline;
+  margin-left: 0.25ch;
 }
